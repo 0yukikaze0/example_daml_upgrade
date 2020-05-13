@@ -1,0 +1,20 @@
+sdk-version: 1.0.1
+name: UpgradeTeam
+source: daml
+parties:
+  - Alice
+version: 0.0.1
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - daml-script
+data-dependencies:
+  - ../TeamBuilderV1/.daml/dist/TeamBuilder-0.0.1.dar
+  - ../TeamBuilderV2/.daml/dist/TeamBuilder-0.0.2.dar
+build-options:
+  - '--package'
+  - 'TeamBuilder-0.0.1 with (Managers.TeamManagers as V1.TeamManagers, Team.Members as V1.Members)'
+  - '--package'
+  - 'TeamBuilder-0.0.2 with (Managers.TeamManagers as V2.TeamManagers, Team.Members as V2.Members)'
+sandbox-options:
+  - --wall-clock-time

@@ -1,0 +1,53 @@
+daml 1.2
+module Team.Members where
+
+type MemberKey = (Party, Int)
+
+template Member
+  with
+    manager     : Party
+    rollingId   : Int
+    firstName   : Text
+    lastName    : Text
+    gender      : Text
+    age         : Decimal
+    location    : Text      -- New Attribute
+  where
+    key (manager, rollingId): MemberKey
+    maintainer key._1
+    signatory manager
+
+    -------------------------------------------
+    -- New code added as part of 0.0.2
+    -------------------------------------------
+    choice ChangeLocation : ContractId Member 
+      with
+        newLocation : Text
+      controller manager
+        do
+          create this with location = newLocation
+            
+
+-------------------------------------------
+-- Scenarios
+-------------------------------------------
+creationTest = scenario do
+  alice <- getParty "Alice"
+
+  member <- submit alice do
+    create Member 
+      {
+        manager   = alice,
+        rollingId = 0,
+        firstName = "Ninja",
+        lastName  = "Pajama",
+        gender    = "Male",
+        age       = 25.0,
+        location  = "In the corner of your eye"
+      }
+  submit alice do
+    exercise member ChangeLocation with newLocation = "Poof"
+
+  assert True
+
+    

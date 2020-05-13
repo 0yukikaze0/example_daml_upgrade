@@ -1,0 +1,37 @@
+daml 1.2
+module Team.Members where
+
+type MemberKey = (Party, Int)
+
+template Member
+  with
+    manager     : Party
+    rollingId   : Int
+    firstName   : Text
+    lastName    : Text
+    gender      : Text
+    age         : Decimal
+  where
+    key (manager, rollingId): MemberKey
+    maintainer key._1
+    signatory manager
+
+-------------------------------------------
+-- Scenarios
+-------------------------------------------
+creationTest = scenario do
+  alice <- getParty "Alice"
+
+  submit alice do
+    create Member 
+      {
+        manager   = alice,
+        rollingId = 0,
+        firstName = "Ninja",
+        lastName  = "Pajama",
+        gender    = "Male",
+        age       = 25.0
+      }
+  assert True
+
+    

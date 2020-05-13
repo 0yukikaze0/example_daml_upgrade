@@ -1,0 +1,83 @@
+daml 1.2
+module Managers.TeamManagers where
+
+import Team.Members as Members
+
+type ManagerKey = (Party, Text)
+
+template TeamManager
+  with
+    owner : Party
+  where
+    key (owner, "MGR") : ManagerKey
+    maintainer key._1
+    signatory owner
+
+    nonconsuming choice AddTeamMember : ContractId Members.Member 
+      with
+        rollingId   : Int
+        firstName   : Text
+        lastName    : Text
+        gender      : Text
+        age         : Decimal
+      controller owner
+        do
+          create Member 
+            {
+              manager   = owner,
+              rollingId = rollingId,
+              firstName = firstName,
+              lastName  = lastName,
+              gender    = gender,
+              age       = age
+            }
+
+-------------------------------------------
+-- Scenarios
+-------------------------------------------
+createTest = scenario do
+  alice <- getParty "alice"
+  
+  -- Create Manager
+  mgr <- submit alice do
+    create TeamManager {owner = alice}
+
+  -- Add members to team
+  submit alice do
+    exercise mgr AddTeamMember 
+      {
+        rollingId = 0,
+        firstName = "Ninja",
+        lastName  = "Pajama",
+        gender    = "Male",
+        age       = 25.0
+      }
+  submit alice do
+    exercise mgr AddTeamMember 
+      {
+        rollingId = 1,
+        firstName = "Error",
+        lastName  = "Terror",
+        gender    = "Male",
+        age       = 26.0
+      }
+  submit alice do
+    exercise mgr AddTeamMember 
+      {
+        rollingId = 2,
+        firstName = "Charming",
+        lastName  = "Warning",
+        gender    = "Female",
+        age       = 23.0
+      }
+  submit alice do
+    exercise mgr AddTeamMember 
+      {
+        rollingId = 3,
+        firstName = "Indent",
+        lastName  = "Pendent",
+        gender    = "Female",
+        age       = 23.0
+      }
+
+  assert True

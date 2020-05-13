@@ -1,0 +1,12 @@
+sdk-version: 1.0.1
+name: TeamBuilder
+source: daml
+parties:
+  - Alice
+version: 0.0.2
+dependencies:
+  - daml-prim
+  - daml-stdlib
+  - daml-script
+sandbox-options:
+  - --wall-clock-time

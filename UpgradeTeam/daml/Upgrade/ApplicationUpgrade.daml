@@ -1,0 +1,135 @@
+daml 1.2
+module Upgrade.ApplicationUpgrade where
+
+import V1.TeamManagers
+import V1.Members
+
+import V2.TeamManagers
+import V2.Members
+
+import DA.Optional
+import DA.Foldable
+
+template AppUpgrade
+  with
+    owner : Party
+  where
+    signatory owner
+
+    -- Choice to upgrade Manager
+    nonconsuming choice UpgradeManager : ContractId V2.TeamManagers.TeamManager with
+       manager : Party
+     controller owner
+        do
+            mgrId <- lookupByKey @V1.TeamManagers.TeamManager (manager, "MGR")
+            archive (fromSome mgrId)
+            create V2.TeamManagers.TeamManager with owner = manager
+    
+    -- Choice to upgrade team members
+    nonconsuming choice UpgradeMembers : ()
+      with
+        manager : Party
+        count   : Int
+      controller owner
+        do
+          forA_ [0..count] (\idx -> do
+              memberId  <- lookupByKey @V1.Members.Member (manager, idx)
+              member    <- fetch (fromSome memberId)
+              archive (fromSome memberId)
+              create V2.Members.Member
+                {
+                  manager   = member.manager,
+                  rollingId = member.rollingId,
+                  firstName = member.firstName,
+                  lastName  = member.lastName,
+                  gender    = member.gender,
+                  age       = member.age,
+                  location  = ""
+                }
+            )
+
+-------------------------------------------
+-- Scenarios
+-------------------------------------------
+
+execUpgrade = scenario do
+  alice <- getParty "Alice"
+  
+  -- Create Seed data on V1 contracts
+  -- Create Manager
+  mgr <- submit alice do
+    create V1.TeamManagers.TeamManager {owner = alice}
+
+  -- Add members to team
+  submit alice do
+    exercise mgr V1.TeamManagers.AddTeamMember 
+      {
+        rollingId = 0,
+        firstName = "Ninja",
+        lastName  = "Pajama",
+        gender    = "Male",
+        age       = 25.0
+      }
+  submit alice do
+    exercise mgr V1.TeamManagers.AddTeamMember 
+      {
+        rollingId = 1,
+        firstName = "Error",
+        lastName  = "Terror",
+        gender    = "Male",
+        age       = 26.0
+      }
+  submit alice do
+    exercise mgr V1.TeamManagers.AddTeamMember 
+      {
+        rollingId = 2,
+        firstName = "Charming",
+        lastName  = "Warning",
+        gender    = "Female",
+        age       = 23.0
+      }
+  submit alice do
+    exercise mgr V1.TeamManagers.AddTeamMember 
+      {
+        rollingId = 3,
+        firstName = "Indent",
+        lastName  = "Intent",
+        gender    = "Female",
+        age       = 23.0
+      }
+
+  -- Create upgrade contract
+  upgradeContract <- submit alice do
+    create AppUpgrade with owner = alice
+    
+  -- Exercise upgrade on manager
+  upgradedMgr <- submit alice do
+    exercise upgradeContract UpgradeManager with manager = alice
+
+  -- Exercise upgrade on all member
+  submit alice do
+    exercise upgradeContract UpgradeMembers 
+      with 
+        manager = alice
+        count   = 3
+
+  -- Start posting data into upgraded contracts
+  submit alice do
+    exercise upgradedMgr V2.TeamManagers.ChangeMemberLocation 
+      with 
+        id = 0
+        location = "In the corner of your eye"
+    exercise upgradedMgr V2.TeamManagers.ChangeMemberLocation 
+      with 
+        id = 1
+        location = "Always on your mind"
+    exercise upgradedMgr V2.TeamManagers.ChangeMemberLocation 
+      with 
+        id = 2
+        location = "The tab you always ignore"
+    exercise upgradedMgr V2.TeamManagers.ChangeMemberLocation 
+      with 
+        id = 3
+        location = "Everywhere"
+          
+  assert True
